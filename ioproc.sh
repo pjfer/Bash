@@ -1,5 +1,5 @@
 #!/bin/bash
-LC_ALL=C
+
 if (($# < 1)); then
   echo "Número de argumentos inválido!"
   exit 1
@@ -18,7 +18,8 @@ f_nproc=0
 rev=0
 write=0
 total=0
-u=0
+y=0
+regex='^[0-9]+$'
 
 while getopts ":c:s:e:u:p:rwt" opt; do
   case $opt in
@@ -39,8 +40,13 @@ while getopts ":c:s:e:u:p:rwt" opt; do
       f_user=1
       ;;
     p)
-      b_nproc=$OPTARG
-      f_nproc=1
+      if (($OPTARG >= 1)) && [[ $OPTARG =~ $regex ]]; then
+        b_nproc=$OPTARG
+        f_nproc=1
+      else
+        echo "O argumento do p tem de ser um número maior ou igual a 1!" >&2
+        exit 1
+      fi
       ;;
     r)
       rev=1
@@ -56,32 +62,44 @@ while getopts ":c:s:e:u:p:rwt" opt; do
       exit 1
       ;;
     \?) 
-      echo "Opção inválida: -$OPTARG" >&2
+      echo "Opções válidas: -c [arg] -u [arg] -p [arg] -s [arg] -e [arg] -t -w -r" >&2
       exit 1
       ;;
   esac
 done
 
+if (($f_datini == 1)) && (($f_datfim == 1)); then
+  if (($b_datini >= $b_datfim)); then
+    echo "A data inicial tem de ser menor ou igual à data final!"
+    exit 1
+  fi
+fi
+
 optt="-n -r -k6"
 
 if (($rev == 1)); then
-  if (($write == 1)); then
-    if (($total == 1)); then
+  optt="-n -k6"
+  if (($total == 1)); then
+    if (($write == 1)); then
       optt="-n -k5"
     else
       optt="-n -k4"
     fi
-    optt="-n -k7"
   else
-    optt="-n -k6"
+    if (($write == 1)); then
+      optt="-n -k7"
+    fi
+  fi
+else
+  if (($write == 1)); then
+    optt="-n -r -k7"
   fi
 fi
 
-regex='^[0-9]+$'
-if [[ ${@: -1} =~ $regex ]]; then #falta fazer a verificação de ser o ultimo argumento
-  s="${@: -1}" #vai buscar o ultimo elemento dos argumentos na bash
+if [[ ${@: -1} =~ $regex ]] && ((${@: -1} > 0)); then
+  s="${@: -1}"
 else
-  echo "O último argumentos têm que ser os segundos!"
+  echo "O último argumento tem que ser os segundos e maior do que 0!"
   exit 1
 fi
 
@@ -140,9 +158,9 @@ printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "COMM" "USER" "PID" "
       p=$((p+1))
     done
     dif1=$((${array[1]} - ${readb[t]}))
-    rater+=($(($dif1 / $s)))
+    rater+=($(bc <<< "scale = 2; ($dif1 / $s)"))
     dif2=$((${array[3]} - ${writeb[t]}))
-    ratew+=($(($dif2 / $s)))
+    ratew+=($(bc <<< "scale = 2; ($dif2 / $s)"))
   else
     rater+=("-1")
     ratew+=("-1")
@@ -160,12 +178,13 @@ printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "COMM" "USER" "PID" "
   c_datini=0
   c_datfim=0
   c_user=0
-  if (($f_nproc == 1)) && (($b_nproc >= 0)); then
+  c_nproc=0
+  if (($f_nproc == 1)); then
     c_nproc=1
-    if (($c_nproc == $b_nproc)); then
+    if (($y == $b_nproc)); then
       break
     else
-      u=$((u+1))
+      y=$((y+1))
     fi
   fi
   if (($f_comm == 1)) && [[ ${comm[-1]} =~ ^$b_comm$ ]]; then
@@ -195,7 +214,7 @@ printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "COMM" "USER" "PID" "
   if (($f_soma == $c_soma)) && (($f_soma != 0)); then
     printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "${comm[-1]}" "${user[-1]}" "$pid" "${readb[-1]}" "${writeb[-1]}" "${rater[-1]}" "${ratew[-1]}" "${date[-1]}"
   fi
-  if (($f_comm == 0)) && (($f_datini == 0)) && (($f_datfim == 0)) && (($f_user == 0)); then 
+  if (($f_comm == 0)) && (($f_datini == 0)) && (($f_datfim == 0)) && (($f_user == 0)) && (($f_nproc == 0)); then 
     printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "${comm[-1]}" "${user[-1]}" "$pid" "${readb[-1]}" "${writeb[-1]}" "${rater[-1]}" "${ratew[-1]}" "${date[-1]}"
   fi
 done } | sort $optt
