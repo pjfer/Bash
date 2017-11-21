@@ -69,7 +69,9 @@ while getopts ":c:s:e:u:p:rwt" opt; do
 done
 
 if (($f_datini == 1)) && (($f_datfim == 1)); then
-  if (($b_datini >= $b_datfim)); then
+  d1=$(date -d"$b_datini" +%s)
+  d2=$(date -d"$b_datfim" +%s)
+  if (($d1 >= $d2)); then
     echo "A data inicial tem de ser menor ou igual à data final!"
     exit 1
   fi
@@ -178,15 +180,6 @@ printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "COMM" "USER" "PID" "
   c_datini=0
   c_datfim=0
   c_user=0
-  c_nproc=0
-  if (($f_nproc == 1)); then
-    c_nproc=1
-    if (($y == $b_nproc)); then
-      break
-    else
-      y=$((y+1))
-    fi
-  fi
   if (($f_comm == 1)) && [[ ${comm[-1]} =~ ^$b_comm$ ]]; then
     c_comm=1
   fi
@@ -209,12 +202,12 @@ printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "COMM" "USER" "PID" "
   if (($f_user == 1)) && [[ ${user[-1]} == $b_user ]]; then
     c_user=1
   fi
-  f_soma=$(($f_comm + $f_user + $f_datini + $f_datfim + $f_nproc))
-  c_soma=$(($c_comm + $c_user + $c_datini + $c_datfim + $c_nproc))
+  f_soma=$(($f_comm + $f_user + $f_datini + $f_datfim))
+  c_soma=$(($c_comm + $c_user + $c_datini + $c_datfim))
   if (($f_soma == $c_soma)) && (($f_soma != 0)); then
     printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "${comm[-1]}" "${user[-1]}" "$pid" "${readb[-1]}" "${writeb[-1]}" "${rater[-1]}" "${ratew[-1]}" "${date[-1]}"
   fi
   if (($f_comm == 0)) && (($f_datini == 0)) && (($f_datfim == 0)) && (($f_user == 0)) && (($f_nproc == 0)); then 
     printf "%-15s %-15s %-10s %-10s %-10s %-10s %-10s %-10s\n" "${comm[-1]}" "${user[-1]}" "$pid" "${readb[-1]}" "${writeb[-1]}" "${rater[-1]}" "${ratew[-1]}" "${date[-1]}"
   fi
-done } | sort $optt
+done } | head -$b_nproc | sort $optt
